@@ -1,0 +1,62 @@
+
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "50051:50051"
+    environment:
+      - REPOSITORY_TYPE=mongo
+      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - LOG_LEVEL=DEBUG
+      - EVENT_SENDER_TYPE=nats
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      mongo:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: "-js"
+    networks:
+      - app_network
+
+  k6:
+    image: grafana/k6
+    volumes:
+      - ./tests:/tests
+      - ./src/infrastructure/proto:/proto
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

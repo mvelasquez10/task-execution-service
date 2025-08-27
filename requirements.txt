@@ -1,0 +1,9 @@
+# requirements.txt
+fastapi
+uvicorn
+pydantic
+grpclib
+protobuf
+dependency-injector
+pymongo
+nats-py
