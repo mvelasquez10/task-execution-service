@@ -48,4 +48,14 @@ describe('RESTful API Integration Tests', () => {
         const response = await axios.delete(`${API_URL}/tasks/${taskId}`);
         expect(response.status).to.equal(204);
     });
+
+    it('should return a healthy status', async () => {
+        const response = await axios.get(`${API_URL}/health`);
+        expect(response.status).to.equal(200);
+        expect(response.data).to.have.property('status', 'healthy');
+        expect(response.data.dependencies).to.deep.equal({
+            repository: 'CLOSED',
+            event_sender: 'CLOSED',
+        });
+    });
 });

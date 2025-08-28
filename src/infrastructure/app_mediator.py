@@ -13,6 +13,7 @@ from src.domain.events import TaskCreatedEvent, TaskCompletedEvent, TaskDeletedE
 from src.domain.repository import TaskRepository
 from src.domain.event_sender import EventSender
 from src.config import config
+from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class AppMediator:
         self,
         task_repository: TaskRepository,
         event_sender: EventSender,
+        circuit_breaker_monitor: CircuitBreakerMonitor,
     ):
         self._task_repository = task_repository
         self._event_sender = event_sender
@@ -39,6 +41,9 @@ class AppMediator:
             fail_max=config.CIRCUIT_BREAKER_FAIL_MAX,
             timeout_duration=config.CIRCUIT_BREAKER_TIMEOUT_DURATION,
         )
+
+        circuit_breaker_monitor.register("repository", self._repository_breaker)
+        circuit_breaker_monitor.register("event_sender", self._event_sender_breaker)
 
         self._repository_breaker.add_listener(CircuitBreakerLogger("Repository"))
         self._event_sender_breaker.add_listener(CircuitBreakerLogger("Event Sender"))

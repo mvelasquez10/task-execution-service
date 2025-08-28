@@ -8,8 +8,11 @@ from src.infrastructure.nats_event_sender import NatsEventSender
 from src.domain.event_sender import EventSender
 from src.config import config
 from src.domain.mediator import Mediator
+from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
 
 class Container(containers.DeclarativeContainer):
+    circuit_breaker_monitor = providers.Singleton(CircuitBreakerMonitor)
+
     task_repository = providers.Selector(
         providers.Object(config.REPOSITORY_TYPE),
         mongo=providers.Singleton(MongoTaskRepository, connection_string=config.MONGO_CONNECTION_STRING),
@@ -29,4 +32,5 @@ class Container(containers.DeclarativeContainer):
         AppMediator,
         task_repository=task_repository,
         event_sender=event_sender,
+        circuit_breaker_monitor=circuit_breaker_monitor,
     )

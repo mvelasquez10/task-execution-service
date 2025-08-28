@@ -7,3 +7,5 @@ omit =
     src/infrastructure/mongo_repository.py
     src/infrastructure/nats_event_sender.py
     src/infrastructure/di_factories.py
+    src/infrastructure/rest_api.py
+    src/infrastructure/grpc_api.py

@@ -14,6 +14,7 @@ from src.application.commands_queries import (
 from src.domain.entities import Task
 from datetime import datetime
 from src.infrastructure.di_factories import Container
+from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -108,5 +109,10 @@ async def get_all_tasks(
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+@inject
+async def health_check(
+    monitor: CircuitBreakerMonitor = Depends(Provide[Container.circuit_breaker_monitor]),
+):
+    health_status = monitor.get_status()
+    status_code = 503 if health_status["status"] == "down" else 200
+    return JSONResponse(content=health_status, status_code=status_code)

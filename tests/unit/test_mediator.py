@@ -13,12 +13,18 @@ from src.application.commands_queries import (
 )
 from src.infrastructure.mock_repository import MockTaskRepository
 from src.infrastructure.mock_event_sender import MockDomainEventSender
+from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
 from aiobreaker import CircuitBreakerError
 import asyncio
 
 @pytest.fixture
-def mediator():
-    return AppMediator(MockTaskRepository(), MockDomainEventSender())
+def monitor():
+    # Return a fresh monitor for each test to ensure isolation
+    return CircuitBreakerMonitor()
+
+@pytest.fixture
+def mediator(monitor):
+    return AppMediator(MockTaskRepository(), MockDomainEventSender(), monitor)
 
 # Helper classes for testing circuit breaker
 class FailingRepository(MockTaskRepository):
@@ -88,8 +94,8 @@ async def test_delete_task_handler(mediator):
     assert retrieved_task is None
 
 @pytest.mark.asyncio
-async def test_repository_circuit_breaker_opens_after_failures():
-    mediator = AppMediator(FailingRepository(), MockDomainEventSender())
+async def test_repository_circuit_breaker_opens_after_failures(monitor):
+    mediator = AppMediator(FailingRepository(), MockDomainEventSender(), monitor)
     
     command = CreateTaskCommand(
         configuration_id=str(uuid.uuid4()),
@@ -97,17 +103,23 @@ async def test_repository_circuit_breaker_opens_after_failures():
         due_date=datetime.now(),
     )
     
+    # The loop should go up to fail_max - 1 to check the transition
     for _ in range(4):
         with pytest.raises(Exception, match="Repository failure"):
             await mediator.handle_command(command)
 
+    # This call should make the breaker open
+    with pytest.raises(CircuitBreakerError):
+         await mediator.handle_command(command)
+
+    # Now the breaker should be open
     with pytest.raises(CircuitBreakerError):
         await mediator.handle_command(command)
 
+
 @pytest.mark.asyncio
-async def test_event_sender_circuit_breaker_opens_after_failures():
-    # Use a fresh MockTaskRepository to ensure it's empty
-    mediator = AppMediator(MockTaskRepository(), FailingEventSender())
+async def test_event_sender_circuit_breaker_opens_after_failures(monitor):
+    mediator = AppMediator(MockTaskRepository(), FailingEventSender(), monitor)
     
     command = CreateTaskCommand(
         configuration_id=str(uuid.uuid4()),
@@ -119,5 +131,10 @@ async def test_event_sender_circuit_breaker_opens_after_failures():
         with pytest.raises(Exception, match="Event sender failure"):
             await mediator.handle_command(command)
 
+    # This call should make the breaker open
+    with pytest.raises(CircuitBreakerError):
+        await mediator.handle_command(command)
+        
+    # Now the breaker should be open
     with pytest.raises(CircuitBreakerError):
         await mediator.handle_command(command)
