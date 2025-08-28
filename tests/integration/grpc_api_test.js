@@ -4,7 +4,7 @@ const protoLoader = require('@grpc/proto-loader');
 const { expect } = require('chai');
 const { v4: uuidv4 } = require('uuid');
 
-const PROTO_PATH = __dirname + '/../../src/infrastructure/task.proto';
+const PROTO_PATH = __dirname + '/../../src/infrastructure/api/task.proto';
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,
     longs: String,

@@ -13,7 +13,7 @@ from src.domain.events import TaskCreatedEvent, TaskCompletedEvent, TaskDeletedE
 from src.domain.repository import TaskRepository
 from src.domain.event_sender import EventSender
 from src.config import config
-from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
+from src.infrastructure.monitoring.circuit_breaker_monitor import CircuitBreakerMonitor
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ import grpc
 from concurrent import futures
 import logging
 from datetime import datetime
-
+from dependency_injector.wiring import inject, Provide
 from src.application.commands_queries import (
     CompleteTaskCommand,
     CreateTaskCommand,
@@ -14,7 +14,7 @@ from src.application.commands_queries import (
 from src.domain.mediator import Mediator
 from src.config import config
 from src.domain.entities import Task
-from src.infrastructure import task_pb2, task_pb2_grpc
+from src.infrastructure.api import task_pb2, task_pb2_grpc
 from src.infrastructure.di_factories import Container
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,8 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
             completed=task.status == "completed",
         )
 
-async def serve(container: Container):
+@inject
+async def serve(container: Container = Provide[Container]):
     server = grpc.aio.server(
         futures.ThreadPoolExecutor(max_workers=config.GRPC_MAX_WORKERS)
     )
@@ -120,10 +121,3 @@ async def serve(container: Container):
     logger.info(f"gRPC server started on port {config.GRPC_PORT}")
     await server.start()
     await server.wait_for_termination()
-
-if __name__ == "__main__":
-    container = Container()
-    container.wire(modules=[__name__])
-    logging.basicConfig(level=logging.INFO)
-    import asyncio
-    asyncio.run(serve(container))

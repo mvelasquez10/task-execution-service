@@ -2,18 +2,18 @@
 import uvicorn
 import asyncio
 from src.infrastructure.di_factories import Container
-from src.infrastructure.rest_api import app as rest_app
-from src.infrastructure.grpc_api import serve as grpc_serve
+from src.infrastructure.api.rest_api import app as rest_app
+from src.infrastructure.api.grpc_api import serve as grpc_serve
 from src.config import setup_logging, config
 
 async def main():
     setup_logging()
     
     container = Container()
-    container.wire(modules=[__name__, "src.infrastructure.rest_api"])
+    container.wire(modules=[__name__, "src.infrastructure.api.rest_api", "src.infrastructure.api.grpc_api"])
     
-    # Start the gRPC server
-    grpc_server = grpc_serve(container)
+    # Start the gRPC server - the container is injected automatically
+    grpc_server = grpc_serve()
     
     # Start the REST API server
     uvicorn_config = uvicorn.Config(

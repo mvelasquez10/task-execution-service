@@ -11,9 +11,9 @@ from src.application.commands_queries import (
     GetTaskQuery,
     GetAllTasksQuery,
 )
-from src.infrastructure.mock_repository import MockTaskRepository
-from src.infrastructure.mock_event_sender import MockDomainEventSender
-from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
+from src.infrastructure.mocks.mock_repository import MockTaskRepository
+from src.infrastructure.mocks.mock_event_sender import MockDomainEventSender
+from src.infrastructure.monitoring.circuit_breaker_monitor import CircuitBreakerMonitor
 from aiobreaker import CircuitBreakerError
 import asyncio
 

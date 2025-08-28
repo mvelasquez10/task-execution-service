@@ -1,14 +1,14 @@
 
 from dependency_injector import providers, containers
 from src.infrastructure.app_mediator import AppMediator
-from src.infrastructure.mongo_repository import MongoTaskRepository
-from src.infrastructure.mock_repository import MockTaskRepository
-from src.infrastructure.mock_event_sender import MockDomainEventSender
-from src.infrastructure.nats_event_sender import NatsEventSender
+from src.infrastructure.persistence.mongo_repository import MongoTaskRepository
+from src.infrastructure.mocks.mock_repository import MockTaskRepository
+from src.infrastructure.mocks.mock_event_sender import MockDomainEventSender
+from src.infrastructure.messaging.nats_event_sender import NatsEventSender
 from src.domain.event_sender import EventSender
 from src.config import config
 from src.domain.mediator import Mediator
-from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
+from src.infrastructure.monitoring.circuit_breaker_monitor import CircuitBreakerMonitor
 
 class Container(containers.DeclarativeContainer):
     circuit_breaker_monitor = providers.Singleton(CircuitBreakerMonitor)

@@ -14,14 +14,14 @@ from src.application.commands_queries import (
 from src.domain.entities import Task
 from datetime import datetime
 from src.infrastructure.di_factories import Container
-from src.infrastructure.circuit_breaker_monitor import CircuitBreakerMonitor
+from src.infrastructure.monitoring.circuit_breaker_monitor import CircuitBreakerMonitor
 from typing import List
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 container = Container()
-container.wire(modules=[__name__])
+# Note: The container wiring is now handled in main.py
 
 @app.post("/tasks/", response_model=Task, status_code=201)
 @inject
