@@ -11,7 +11,7 @@ from src.application.commands_queries import (
     GetAllTasksQuery,
     GetTaskQuery,
 )
-from src.application.mediator import Mediator
+from src.domain.mediator import Mediator
 from src.config import config
 from src.domain.entities import Task
 from src.infrastructure import task_pb2, task_pb2_grpc
@@ -33,7 +33,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
                 role_id=request.role_id,
                 due_date=datetime.fromtimestamp(request.due_date),
             )
-            task = await self.mediator.handle(command)
+            task = await self.mediator.handle_command(command)
             return self._task_to_proto(task)
         except Exception as e:
             logger.exception("An unexpected error occurred while creating a task")
@@ -45,7 +45,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
         logger.info(f"Received request to complete task {request.task_id}")
         try:
             command = CompleteTaskCommand(task_id=request.task_id)
-            task = await self.mediator.handle(command)
+            task = await self.mediator.handle_command(command)
             if task is None:
                 context.set_details("Task not found")
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -61,7 +61,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
         logger.info(f"Received request to delete task {request.task_id}")
         try:
             command = DeleteTaskCommand(task_id=request.task_id)
-            await self.mediator.handle(command)
+            await self.mediator.handle_command(command)
             return task_pb2.Empty()
         except Exception as e:
             logger.exception(f"An unexpected error occurred while deleting task {request.task_id}")
@@ -73,7 +73,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
         logger.info(f"Received request to get task {request.task_id}")
         try:
             query = GetTaskQuery(task_id=request.task_id)
-            task = await self.mediator.handle(query)
+            task = await self.mediator.handle_query(query)
             if task is None:
                 context.set_details("Task not found")
                 context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -89,7 +89,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
         logger.info("Received request to get all tasks")
         try:
             query = GetAllTasksQuery(page=request.page, limit=request.limit)
-            tasks = await self.mediator.handle(query)
+            tasks = await self.mediator.handle_query(query)
             return task_pb2.GetAllTasksResponse(
                 tasks=[self._task_to_proto(task) for task in tasks]
             )

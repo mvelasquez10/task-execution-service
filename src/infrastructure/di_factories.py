@@ -1,12 +1,13 @@
 
 from dependency_injector import providers, containers
-from src.application.mediator import Mediator
+from src.infrastructure.app_mediator import AppMediator
 from src.infrastructure.mongo_repository import MongoTaskRepository
 from src.infrastructure.mock_repository import MockTaskRepository
 from src.infrastructure.mock_event_sender import MockDomainEventSender
 from src.infrastructure.nats_event_sender import NatsEventSender
 from src.domain.event_sender import EventSender
 from src.config import config
+from src.domain.mediator import Mediator
 
 class Container(containers.DeclarativeContainer):
     task_repository = providers.Selector(
@@ -24,8 +25,8 @@ class Container(containers.DeclarativeContainer):
             stream_name=config.NATS_STREAM_NAME,
         ),
     )
-    mediator = providers.Factory(
-        Mediator,
+    mediator: providers.Singleton[Mediator] = providers.Singleton(
+        AppMediator,
         task_repository=task_repository,
         event_sender=event_sender,
     )

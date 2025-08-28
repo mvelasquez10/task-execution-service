@@ -14,7 +14,7 @@ from src.domain.event_sender import EventSender
 
 logger = logging.getLogger(__name__)
 
-class Mediator:
+class AppMediator:
     def __init__(
         self,
         task_repository: TaskRepository,
@@ -84,11 +84,18 @@ class Mediator:
         logger.info(f"Handling GetAllTasksQuery with page: {query.page}, limit: {query.limit}")
         return await self._task_repository.get_all(query.page, query.limit)
 
-    async def handle(self, command_or_query):
-        handler = self._command_handlers.get(type(command_or_query)) or self._query_handlers.get(
-            type(command_or_query))
+    async def handle_command(self, command):
+        handler = self._command_handlers.get(type(command))
         if handler:
-            logger.debug(f"Routing {type(command_or_query).__name__} to handler")
-            return await handler(command_or_query)
-        logger.error(f"No handler found for {type(command_or_query).__name__}")
-        raise ValueError(f"No handler found for {type(command_or_query).__name__}")
+            logger.debug(f"Routing {type(command).__name__} to handler")
+            return await handler(command)
+        logger.error(f"No handler found for {type(command).__name__}")
+        raise ValueError(f"No handler found for {type(command).__name__}")
+
+    async def handle_query(self, query):
+        handler = self._query_handlers.get(type(query))
+        if handler:
+            logger.debug(f"Routing {type(query).__name__} to handler")
+            return await handler(query)
+        logger.error(f"No handler found for {type(query).__name__}")
+        raise ValueError(f"No handler found for {type(query).__name__}")

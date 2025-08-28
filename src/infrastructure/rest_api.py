@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from dependency_injector.wiring import inject, Provide
 import logging
-from src.application.mediator import Mediator
+from src.domain.mediator import Mediator
 from src.application.commands_queries import (
     CreateTaskCommand,
     CompleteTaskCommand,
@@ -37,7 +37,7 @@ async def create_task(
             role_id=task_data.get("role_id"),
             due_date=datetime.fromisoformat(task_data["due_date"])
         )
-        task = await mediator.handle(command)
+        task = await mediator.handle_command(command)
         return task.model_dump()
     except Exception as e:
         logger.exception("An unexpected error occurred while creating a task")
@@ -52,7 +52,7 @@ async def complete_task(
     logger.info(f"Received request to complete task {task_id}")
     try:
         command = CompleteTaskCommand(task_id=task_id)
-        task = await mediator.handle(command)
+        task = await mediator.handle_command(command)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
         return task.model_dump()
@@ -69,7 +69,7 @@ async def delete_task(
     logger.info(f"Received request to delete task {task_id}")
     try:
         command = DeleteTaskCommand(task_id=task_id)
-        await mediator.handle(command)
+        await mediator.handle_command(command)
     except Exception as e:
         logger.exception(f"An unexpected error occurred while deleting task {task_id}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -83,7 +83,7 @@ async def get_task(
     logger.info(f"Received request to get task {task_id}")
     try:
         query = GetTaskQuery(task_id=task_id)
-        task = await mediator.handle(query)
+        task = await mediator.handle_query(query)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
         return task.model_dump()
@@ -101,7 +101,7 @@ async def get_all_tasks(
     logger.info("Received request to get all tasks")
     try:
         query = GetAllTasksQuery(page=page, limit=limit)
-        tasks = await mediator.handle(query)
+        tasks = await mediator.handle_query(query)
         return [task.model_dump() for task in tasks]
     except Exception as e:
         logger.exception("An unexpected error occurred while getting all tasks")
