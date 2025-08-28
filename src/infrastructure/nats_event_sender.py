@@ -19,16 +19,13 @@ class NatsEventSender(EventSender):
             self._js = self._nc.jetstream()
             await self._js.add_stream(name=self._stream_name, subjects=[self._subject])
 
-    async def _send_async(self, event):
+    async def send(self, event):
         await self._connect()
         try:
             await self._js.publish(self._subject, event.model_dump_json().encode())
             logger.info(f"Event {type(event).__name__} sent to NATS stream '{self._stream_name}'")
         except Exception as e:
             logger.error(f"Error sending event to NATS: {e}")
-
-    def send(self, event):
-        asyncio.create_task(self._send_async(event))
 
     async def close(self):
         if self._nc:

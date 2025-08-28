@@ -8,3 +8,4 @@ pymongo
 nats-py>=2.2.0
 grpcio
 protobuf
+aiobreaker

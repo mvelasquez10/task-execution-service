@@ -1,6 +1,7 @@
 import os
 import logging
 import sys
+from datetime import timedelta
 
 class AppConfig:
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -13,6 +14,8 @@ class AppConfig:
     REST_PORT = int(os.environ.get("REST_PORT", "8000"))
     GRPC_PORT = int(os.environ.get("GRPC_PORT", "50051"))
     GRPC_MAX_WORKERS = int(os.environ.get("GRPC_MAX_WORKERS", "10"))
+    CIRCUIT_BREAKER_FAIL_MAX = int(os.environ.get("CIRCUIT_BREAKER_FAIL_MAX", "5"))
+    CIRCUIT_BREAKER_TIMEOUT_DURATION = timedelta(seconds=int(os.environ.get("CIRCUIT_BREAKER_TIMEOUT_DURATION", "60")))
 
 def setup_logging():
     logging.basicConfig(

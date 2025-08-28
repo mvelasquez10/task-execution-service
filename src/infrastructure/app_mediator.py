@@ -1,5 +1,6 @@
 
 import logging
+from aiobreaker import CircuitBreaker, CircuitBreakerListener
 from src.application.commands_queries import (
     CreateTaskCommand,
     CompleteTaskCommand,
@@ -11,8 +12,16 @@ from src.domain.entities import Task
 from src.domain.events import TaskCreatedEvent, TaskCompletedEvent, TaskDeletedEvent
 from src.domain.repository import TaskRepository
 from src.domain.event_sender import EventSender
+from src.config import config
 
 logger = logging.getLogger(__name__)
+
+class CircuitBreakerLogger(CircuitBreakerListener):
+    def __init__(self, name):
+        self._name = name
+
+    def state_change(self, cb, old_state, new_state):
+        logger.info(f"{self._name} circuit breaker state changed from {old_state} to {new_state}")
 
 class AppMediator:
     def __init__(
@@ -22,6 +31,18 @@ class AppMediator:
     ):
         self._task_repository = task_repository
         self._event_sender = event_sender
+        self._repository_breaker = CircuitBreaker(
+            fail_max=config.CIRCUIT_BREAKER_FAIL_MAX,
+            timeout_duration=config.CIRCUIT_BREAKER_TIMEOUT_DURATION,
+        )
+        self._event_sender_breaker = CircuitBreaker(
+            fail_max=config.CIRCUIT_BREAKER_FAIL_MAX,
+            timeout_duration=config.CIRCUIT_BREAKER_TIMEOUT_DURATION,
+        )
+
+        self._repository_breaker.add_listener(CircuitBreakerLogger("Repository"))
+        self._event_sender_breaker.add_listener(CircuitBreakerLogger("Event Sender"))
+
         self._command_handlers = {
             CreateTaskCommand: self._handle_create_task,
             CompleteTaskCommand: self._handle_complete_task,
@@ -42,7 +63,7 @@ class AppMediator:
             role_id=command.role_id,
             due_date=command.due_date,
         )
-        created_task = await self._task_repository.create(task)
+        created_task = await self._repository_breaker.call_async(self._task_repository.create, task)
         event = TaskCreatedEvent(
             task_id=created_task.id,
             configuration_id=created_task.configuration_id,
@@ -52,18 +73,18 @@ class AppMediator:
             due_date=created_task.due_date,
             status=created_task.status,
         )
-        self._event_sender.send(event)
+        await self._event_sender_breaker.call_async(self._event_sender.send, event)
         logger.info(f"Task created successfully with ID: {created_task.id}")
         return created_task
 
     async def _handle_complete_task(self, command: CompleteTaskCommand) -> Task:
         logger.info(f"Handling CompleteTaskCommand for task: {command.task_id}")
-        task = await self._task_repository.get_by_id(command.task_id)
+        task = await self._repository_breaker.call_async(self._task_repository.get_by_id, command.task_id)
         if task:
             task.status = "completed"
-            updated_task = await self._task_repository.update(task)
+            updated_task = await self._repository_breaker.call_async(self._task_repository.update, task)
             event = TaskCompletedEvent(task_id=updated_task.id)
-            self._event_sender.send(event)
+            await self._event_sender_breaker.call_async(self._event_sender.send, event)
             logger.info(f"Task {command.task_id} completed successfully")
             return updated_task
         logger.warning(f"Task {command.task_id} not found for completion")
@@ -71,18 +92,18 @@ class AppMediator:
 
     async def _handle_delete_task(self, command: DeleteTaskCommand):
         logger.info(f"Handling DeleteTaskCommand for task: {command.task_id}")
-        await self._task_repository.delete(command.task_id)
+        await self._repository_breaker.call_async(self._task_repository.delete, command.task_id)
         event = TaskDeletedEvent(task_id=command.task_id)
-        self._event_sender.send(event)
+        await self._event_sender_breaker.call_async(self._event_sender.send, event)
         logger.info(f"Task {command.task_id} deleted successfully")
 
     async def _handle_get_task(self, query: GetTaskQuery) -> Task:
         logger.info(f"Handling GetTaskQuery for task: {query.task_id}")
-        return await self._task_repository.get_by_id(query.task_id)
+        return await self._repository_breaker.call_async(self._task_repository.get_by_id, query.task_id)
 
     async def _handle_get_all_tasks(self, query: GetAllTasksQuery):
         logger.info(f"Handling GetAllTasksQuery with page: {query.page}, limit: {query.limit}")
-        return await self._task_repository.get_all(query.page, query.limit)
+        return await self._repository_breaker.call_async(self._task_repository.get_all, query.page, query.limit)
 
     async def handle_command(self, command):
         handler = self._command_handlers.get(type(command))
