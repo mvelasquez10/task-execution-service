@@ -1,23 +1,19 @@
+
 from pydantic import BaseModel
-import uuid
 from datetime import datetime
 from typing import Optional
 
-class DomainEvent(BaseModel):
-    id: uuid.UUID = uuid.uuid4()
-    created_at: datetime = datetime.utcnow()
-
-class TaskCreatedEvent(DomainEvent):
-    task_id: uuid.UUID
-    status: str
-    configuration_id: uuid.UUID
+class TaskCreatedEvent(BaseModel):
+    task_id: str
+    configuration_id: str
     location_id: str
-    user_id: Optional[str] = None
-    role_id: Optional[str] = None
+    user_id: Optional[str]
+    role_id: Optional[str]
     due_date: datetime
+    status: str
 
-class TaskCompletedEvent(DomainEvent):
-    task_id: uuid.UUID
+class TaskCompletedEvent(BaseModel):
+    task_id: str
 
-class TaskDeletedEvent(DomainEvent):
-    task_id: uuid.UUID
+class TaskDeletedEvent(BaseModel):
+    task_id: str

@@ -5,12 +5,12 @@ from typing import Optional
 
 
 class Task(BaseModel):
-    id: Optional[str]
+    id: Optional[str] = None
     status: str
     configuration_id: str
     location_id: str
-    user_id: Optional[str]
-    role_id: Optional[str]
+    user_id: Optional[str] = None
+    role_id: Optional[str] = None
     due_date: datetime
 
     def to_json(self):

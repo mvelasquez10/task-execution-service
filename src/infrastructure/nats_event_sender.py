@@ -1,38 +1,35 @@
-import json
+
+import nats
+import asyncio
 import logging
-from nats.aio.client import Client as NATS
-from nats.aio.errors import ErrStreamNotFound
+from src.domain.event_sender import EventSender
 
-from src.domain.event_sender import IDomainEventSender
-from src.domain.events import DomainEvent
+logger = logging.getLogger(__name__)
 
-class NatsEventSender(IDomainEventSender):
+class NatsEventSender(EventSender):
     def __init__(self, nats_url: str, subject: str, stream_name: str):
-        self.nats_url = nats_url
-        self.subject = subject
-        self.stream_name = stream_name
-        self.nc = NATS()
-        self.js = None
+        self._nats_url = nats_url
+        self._subject = subject
+        self._stream_name = stream_name
+        self._nc = None
 
     async def _connect(self):
-        if self.js is None:
-            await self.nc.connect(servers=[self.nats_url])
-            self.js = self.nc.jetstream()
-            try:
-                await self.js.stream_info(self.stream_name)
-            except ErrStreamNotFound:
-                logging.info(f"Stream '{self.stream_name}' not found, creating it.")
-                await self.js.add_stream(name=self.stream_name, subjects=[self.subject])
+        if not self._nc:
+            self._nc = await nats.connect(self._nats_url)
+            self._js = self._nc.jetstream()
+            await self._js.add_stream(name=self._stream_name, subjects=[self._subject])
 
-
-    async def send(self, event: DomainEvent):
+    async def _send_async(self, event):
         await self._connect()
         try:
-            ack = await self.js.publish(
-                subject=self.subject,
-                payload=json.dumps(event.to_dict()).encode(),
-            )
-            logging.info(f"Published event to JetStream stream '{self.stream_name}' with sequence number {ack.seq}")
+            await self._js.publish(self._subject, event.model_dump_json().encode())
+            logger.info(f"Event {type(event).__name__} sent to NATS stream '{self._stream_name}'")
         except Exception as e:
-            logging.error(f"Failed to publish event to JetStream: {e}")
-            raise
+            logger.error(f"Error sending event to NATS: {e}")
+
+    def send(self, event):
+        asyncio.create_task(self._send_async(event))
+
+    async def close(self):
+        if self._nc:
+            await self._nc.close()

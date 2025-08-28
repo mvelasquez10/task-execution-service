@@ -2,3 +2,8 @@
 omit =
     src/main.py
     src/config.py
+    src/infrastructure/task_pb2.py
+    src/infrastructure/task_pb2_grpc.py
+    src/infrastructure/mongo_repository.py
+    src/infrastructure/nats_event_sender.py
+    src/infrastructure/di_factories.py

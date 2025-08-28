@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
-from src.domain.events import DomainEvent
 
-class IDomainEventSender(ABC):
+from abc import ABC, abstractmethod
+
+class EventSender(ABC):
     @abstractmethod
-    async def send(self, event: DomainEvent):
-        pass
+    def send(self, event):
+        """Sends a domain event."""
+        raise NotImplementedError

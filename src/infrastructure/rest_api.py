@@ -12,7 +12,6 @@ from src.application.commands_queries import (
     GetAllTasksQuery,
 )
 from src.domain.entities import Task
-import uuid
 from datetime import datetime
 from src.infrastructure.di_factories import Container
 from typing import List
@@ -23,7 +22,7 @@ app = FastAPI()
 container = Container()
 container.wire(modules=[__name__])
 
-@app.post("/tasks/", response_model=Task)
+@app.post("/tasks/", response_model=Task, status_code=201)
 @inject
 async def create_task(
     task_data: dict,
@@ -32,7 +31,7 @@ async def create_task(
     logger.info("Received request to create task")
     try:
         command = CreateTaskCommand(
-            configuration_id=uuid.UUID(task_data["configuration_id"]),
+            configuration_id=task_data["configuration_id"],
             location_id=task_data["location_id"],
             user_id=task_data.get("user_id"),
             role_id=task_data.get("role_id"),
@@ -52,7 +51,7 @@ async def complete_task(
 ):
     logger.info(f"Received request to complete task {task_id}")
     try:
-        command = CompleteTaskCommand(task_id=uuid.UUID(task_id))
+        command = CompleteTaskCommand(task_id=task_id)
         task = await mediator.handle(command)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -69,7 +68,7 @@ async def delete_task(
 ):
     logger.info(f"Received request to delete task {task_id}")
     try:
-        command = DeleteTaskCommand(task_id=uuid.UUID(task_id))
+        command = DeleteTaskCommand(task_id=task_id)
         await mediator.handle(command)
     except Exception as e:
         logger.exception(f"An unexpected error occurred while deleting task {task_id}")
@@ -83,7 +82,7 @@ async def get_task(
 ):
     logger.info(f"Received request to get task {task_id}")
     try:
-        query = GetTaskQuery(task_id=uuid.UUID(task_id))
+        query = GetTaskQuery(task_id=task_id)
         task = await mediator.handle(query)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
